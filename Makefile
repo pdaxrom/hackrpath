@@ -1,4 +1,4 @@
-all: hackrpath hello
+all: hackrpath
 
 CFLAGS = -Wall -Wpedantic -std=gnu99 -fpic -g
 CXXFLAGS = -Wall -Wpedantic -fpic -g
@@ -20,12 +20,16 @@ libhello/libhello++.so: libhello/libhello++.o
 hello++: hello++.o libhello/libhello++.so
 	$(CXX) -o $@ hello++.o -Llibhello -lhello++
 
-test: hackrpath hello
+test: hackrpath hello hello++
 	./hello || true
 	./hackrpath --set-rpath \$$ORIGIN/libhello hello
 	./hackrpath --print-rpath hello
 	./hello
+	./hello++ || true
+	./hackrpath --set-rpath \$$ORIGIN/libhello hello++
+	./hackrpath --print-rpath hello++
+	./hello++
 	@echo "All done!"
 
 clean:
-	rm -f *.o hackrpath hello libhello/libhello.*o
+	rm -f *.o hackrpath hello libhello/libhello*.*o hello++ 
