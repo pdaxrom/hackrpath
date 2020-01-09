@@ -1,6 +1,7 @@
-#include <stdio.h>
+#include <iostream>
+using namespace std;
 
 void hello_world()
 {
-    printf("Hello, RUNPATH!\n");
+    cout << "Hello, RUNPATH!" << endl;
 }
