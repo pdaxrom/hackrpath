@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
     char *buf;
     size_t bufsiz;
 
-    if (!strcmp(argv[1], "--set-rpath")) {
+    if (argc == 4 && !strcmp(argv[1], "--set-rpath")) {
 	if (load_file(argv[3], &buf, &bufsiz) != -1) {
 	    int ret = -1;
 
@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
 	    free(buf);
 	    return ret;
 	}
-    } else if (!strcmp(argv[1], "--print-rpath")) {
+    } else if (argc == 3 && !strcmp(argv[1], "--print-rpath")) {
 	if (load_file(argv[2], &buf, &bufsiz) != -1) {
 	    int ret = -1;
 
@@ -143,6 +143,10 @@ int main(int argc, char *argv[])
 	}
     } else {
 	fprintf(stderr, "Unknown parameter %s\n", argv[1]);
+	fprintf(stderr, "Usage: %s\n", argv[0]);
+	fprintf(stderr, "  [--set-rpath RPATH]\n");
+	fprintf(stderr, "  [--print-rpath]\n");
+	fprintf(stderr, "  FILENAME\n");
     }
 
     return -1;
