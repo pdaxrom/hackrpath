@@ -28,4 +28,4 @@ test: hackrpath hello
 	@echo "All done!"
 
 clean:
-	rm -f *.o hackrpath hello libhello/libhello.o
+	rm -f *.o hackrpath hello libhello/libhello.*o
