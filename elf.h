@@ -82,13 +82,13 @@ static int ELF_PREFIX(add_runpath)(char **ptr, size_t *size, char *path)
     }
 
     Elf_Shdr *shdr5 = ELF_PREFIX(find_section)(mem, ".dynsym");
-    if (!shdr2) {
+    if (!shdr5) {
 	fprintf(stderr, "Section .dynsym not found!\n");
 	return -1;
     }
 
     Elf_Shdr *shdr6 = ELF_PREFIX(find_section)(mem, ".dynstr");
-    if (!shdr2) {
+    if (!shdr6) {
 	fprintf(stderr, "Section .dynstr not found!\n");
 	return -1;
     }
@@ -103,7 +103,7 @@ static int ELF_PREFIX(add_runpath)(char **ptr, size_t *size, char *path)
     shdr6->sh_addr = shdr5->sh_addr + shdr5->sh_size;
     shdr6->sh_offset = shdr5->sh_offset + shdr5->sh_size;
 
-    printf("get %d bytes for string table\n", endlen);
+//    printf("get %d bytes for string table\n", endlen);
 
     memset(&mem[shdr6->sh_offset + shdr6->sh_size], 0, endlen);
 
@@ -135,6 +135,22 @@ static int ELF_PREFIX(add_runpath)(char **ptr, size_t *size, char *path)
     if (dyn) {
 	dyn->d_tag = DT_RUNPATH;
 	dyn->d_un.d_val = newpath;
+    }
+
+    return 0;
+}
+
+int ELF_PREFIX(print_runpath)(char *mem, size_t size)
+{
+    Elf_Shdr *shdr6 = ELF_PREFIX(find_section)(mem, ".dynstr");
+    if (!shdr6) {
+	fprintf(stderr, "Section .dynstr not found!\n");
+	return -1;
+    }
+
+    Elf_Dyn *dyn = ELF_PREFIX(find_dynamic_entry)(mem, DT_RUNPATH);
+    if (dyn) {
+	printf("%s\n", &mem[shdr6->sh_offset + dyn->d_un.d_val]);
     }
 
     return 0;

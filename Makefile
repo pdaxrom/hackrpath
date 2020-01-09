@@ -13,5 +13,12 @@ libhello/libhello.so: libhello/libhello.o
 hello: hello.o libhello/libhello.so
 	$(CC) -o $@ hello.o -Llibhello -lhello
 
+test: hackrpath hello
+	./hello || true
+	./hackrpath --set-rpath \$$ORIGIN/libhello hello
+	./hackrpath --print-rpath hello
+	./hello
+	@echo "All done!"
+
 clean:
 	rm -f *.o hackrpath hello libhello/libhello.o

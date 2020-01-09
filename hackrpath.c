@@ -7,8 +7,6 @@
 #include <elf.h>
 #include <linux/limits.h>
 
-static int debug = 0;
-
 #include "elf.h"
 #define USE_ELF64
 #include "elf.h"
@@ -17,16 +15,14 @@ static int debug = 0;
 static int write_file(char *name, char *mem, size_t size)
 {
     int ret = -1;
-    char outname[PATH_MAX];
-    snprintf(outname, sizeof(outname), "%s.out", name);
-    FILE *out = fopen(outname, "wb");
+    FILE *out = fopen(name, "wb");
     if (!out) {
-	fprintf(stderr, "cannot write file %s\n", outname);
+	fprintf(stderr, "cannot write file %s\n", name);
 	return -1;
     }
 
     if (fwrite(mem, 1, size, out) != size) {
-	fprintf(stderr, "cannot write file %s\n", outname);
+	fprintf(stderr, "cannot write file %s\n", name);
     } else {
 	ret = 0;
     }
@@ -52,7 +48,6 @@ static int load_file(char *name, char **mem, size_t *size)
     }
 
     *size = sb.st_size;
-    fprintf(stderr, "File size: %d\n", (int)*size);
 
     *mem = malloc(*size);
     if (!*mem) {
@@ -85,10 +80,18 @@ int main(int argc, char *argv[])
 
     if (!strcmp(argv[1], "--set-rpath")) {
 	if (load_file(argv[3], &buf, &bufsiz) != -1) {
-	    Elf32_add_runpath(&buf, &bufsiz, argv[2]);
-	    int ret = write_file(argv[3], buf, bufsiz);
+	    int ret = -1;
+	    if ((Elf32_add_runpath(&buf, &bufsiz, argv[2]) != -1) &&
+		(write_file(argv[3], buf, bufsiz) != -1)) {
+		ret = 0;
+	    }
 	    free(buf);
 	    return ret;
+	}
+    } else if (!strcmp(argv[1], "--print-rpath")) {
+	if ((load_file(argv[2], &buf, &bufsiz) != -1) &&
+	    (Elf32_print_runpath(buf, bufsiz) != -1)) {
+	    return 0;
 	}
     } else {
 	fprintf(stderr, "Unknown parameter %s\n", argv[1]);
