@@ -36,61 +36,63 @@ static int write_file(char *name, char *mem, size_t size)
     return ret;
 }
 
-int main(int argc, char *argv[])
+static int load_file(char *name, char **mem, size_t *size)
 {
     struct stat sb;
-    char *buf;
-    size_t bufsiz;
     FILE *inf;
 
-    if (stat(argv[1], &sb) == -1) {
+    if (stat(name, &sb) == -1) {
 	perror("stat");
-	exit(EXIT_FAILURE);
-    }
-
-    if ((sb.st_mode & S_IFMT) != S_IFREG) {
-	fprintf(stderr, "File %s is not regular file!\n", argv[1]);
 	return -1;
     }
 
-    bufsiz = sb.st_size;
-    fprintf(stderr, "File size: %d\n", (int)bufsiz);
+    if ((sb.st_mode & S_IFMT) != S_IFREG) {
+	fprintf(stderr, "File %s is not regular file!\n", name);
+	return -1;
+    }
 
-    buf = malloc(bufsiz);
-    if (!buf) {
+    *size = sb.st_size;
+    fprintf(stderr, "File size: %d\n", (int)*size);
+
+    *mem = malloc(*size);
+    if (!*mem) {
 	fprintf(stderr, "cannot allocate memory for file\n");
 	return -1;
     }
 
-    inf = fopen(argv[1], "rb");
+    inf = fopen(name, "rb");
     if (!inf) {
-	fprintf(stderr, "can not open file %s\n", argv[1]);
-	free(buf);
+	fprintf(stderr, "can not open file %s\n", name);
+	free(*mem);
 	return -1;
     }
 
-    if (fread(buf, 1, bufsiz, inf) != bufsiz) {
+    if (fread(*mem, 1, *size, inf) != *size) {
 	fprintf(stderr, "error reading file\n");
 	fclose(inf);
-	free(buf);
+	free(*mem);
 	return -1;
     }
 
     fclose(inf);
-
-//    elf32_parse(buf, bufsiz);
-
-//    elf32_resize_section(&buf, &bufsiz, ".dynamic", 0x100);
-
-//    fprintf(stderr, "New file size: %d\n", (int)bufsiz);
-
-    Elf32_add_runpath(&buf, &bufsiz, "$ORIGIN/../lib");
-
-//    elf32_parse(buf, bufsiz);
-
-    write_file(argv[1], buf, bufsiz);
-
-    free(buf);
-
     return 0;
+}
+
+int main(int argc, char *argv[])
+{
+    char *buf;
+    size_t bufsiz;
+
+    if (!strcmp(argv[1], "--set-rpath")) {
+	if (load_file(argv[3], &buf, &bufsiz) != -1) {
+	    Elf32_add_runpath(&buf, &bufsiz, argv[2]);
+	    int ret = write_file(argv[3], buf, bufsiz);
+	    free(buf);
+	    return ret;
+	}
+    } else {
+	fprintf(stderr, "Unknown parameter %s\n", argv[1]);
+    }
+
+    return -1;
 }

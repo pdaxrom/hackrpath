@@ -55,10 +55,29 @@ static Elf_Dyn *ELF_PREFIX(find_dynamic_entry)(char *mem, Elf_Sword tag)
 static int ELF_PREFIX(add_runpath)(char **ptr, size_t *size, char *path)
 {
     char *mem = *ptr;
+    Elf_Ehdr *ehdr = (Elf_Ehdr *)mem;
+
+    if (ehdr->e_shentsize != sizeof(Elf_Shdr)) {
+	fprintf(stderr, "Wrong size of section in header(%d, %d)!\n",
+		ehdr->e_shentsize, sizeof(Elf_Shdr));
+	return -1;
+    }
 
     Elf_Shdr *shdr2 = ELF_PREFIX(find_section)(mem, ".note.ABI-tag");
     if (!shdr2) {
 	fprintf(stderr, "Section .note.ABI-tag not found!\n");
+	return -1;
+    }
+
+    Elf_Shdr *shdr_next = shdr2 + 1;
+    if (strcmp(ELF_PREFIX(section_name)(mem, shdr_next->sh_name), ".note.gnu.build-id")) {
+	fprintf(stderr, "Section .note.gnu.build-id not found!\n");
+	return -1;
+    }
+
+    shdr_next++;
+    if (strcmp(ELF_PREFIX(section_name)(mem, shdr_next->sh_name), ".gnu.hash")) {
+	fprintf(stderr, "Section .gnu.hash not found!\n");
 	return -1;
     }
 
@@ -79,13 +98,14 @@ static int ELF_PREFIX(add_runpath)(char **ptr, size_t *size, char *path)
     shdr5->sh_offset = shdr2->sh_offset;
     memset((char *)shdr2, 0, sizeof(Elf_Shdr) * 3);
 
-    char endlen = (shdr6->sh_offset + shdr6->sh_size) - (shdr5->sh_offset + shdr5->sh_size + shdr6->sh_size);
+    size_t endlen = (shdr6->sh_offset + shdr6->sh_size) - (shdr5->sh_offset + shdr5->sh_size + shdr6->sh_size);
     memmove(&mem[shdr5->sh_offset + shdr5->sh_size], &mem[shdr6->sh_offset], shdr6->sh_size);
     shdr6->sh_addr = shdr5->sh_addr + shdr5->sh_size;
     shdr6->sh_offset = shdr5->sh_offset + shdr5->sh_size;
-    memset(&mem[shdr6->sh_offset + shdr6->sh_size], 0, endlen);
 
     printf("get %d bytes for string table\n", endlen);
+
+    memset(&mem[shdr6->sh_offset + shdr6->sh_size], 0, endlen);
 
     if (strlen(path) > endlen - 1) {
 	fprintf(stderr, "path too long\n");
