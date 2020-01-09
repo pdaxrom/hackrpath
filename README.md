@@ -7,7 +7,7 @@ This utility replacing sections .note.ABI-tag, .note.gnu.build-id, .gnu.hash wit
 
 Usage:
 
-$ hackrpath --set-rpath \$ORIGIN/lib myapp
+$ hackrpath --set-rpath \\$ORIGIN/lib myapp
   
 $ hackrpath --print-rpath myapp
 
