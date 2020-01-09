@@ -1,3 +1,22 @@
+/*
+ * Simple patchelf replacement for arm architecture.
+ * Copyright © 2020 sashz <sashz@pdaXrom.org>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -11,6 +30,21 @@
 #define USE_ELF64
 #include "elf.h"
 #undef USE_ELF64
+
+static int Elf_get_type(char *mem, size_t size)
+{
+    Elf32_Ehdr *ehdr = (Elf32_Ehdr *)mem;
+
+    if (!memcmp(ehdr->e_ident, ELFMAG, SELFMAG)) {
+	switch(ehdr->e_ident[EI_CLASS]) {
+	case 1:	return 32;
+	case 2: return 64;
+	default: break;
+	}
+    }
+
+    return -1;
+}
 
 static int write_file(char *name, char *mem, size_t size)
 {
@@ -81,17 +115,31 @@ int main(int argc, char *argv[])
     if (!strcmp(argv[1], "--set-rpath")) {
 	if (load_file(argv[3], &buf, &bufsiz) != -1) {
 	    int ret = -1;
-	    if ((Elf32_add_runpath(&buf, &bufsiz, argv[2]) != -1) &&
-		(write_file(argv[3], buf, bufsiz) != -1)) {
-		ret = 0;
+
+	    switch (Elf_get_type(buf, bufsiz)) {
+	    case 32: ret = Elf32_add_runpath(&buf, &bufsiz, argv[2]); break;
+	    case 64: ret = Elf64_add_runpath(&buf, &bufsiz, argv[2]); break;
+	    default: break;
 	    }
+
+	    if (ret != -1) {
+		ret = write_file(argv[3], buf, bufsiz);
+	    }
+
 	    free(buf);
 	    return ret;
 	}
     } else if (!strcmp(argv[1], "--print-rpath")) {
-	if ((load_file(argv[2], &buf, &bufsiz) != -1) &&
-	    (Elf32_print_runpath(buf, bufsiz) != -1)) {
-	    return 0;
+	if (load_file(argv[2], &buf, &bufsiz) != -1) {
+	    int ret = -1;
+
+	    switch (Elf_get_type(buf, bufsiz)) {
+	    case 32: ret = Elf32_print_runpath(buf, bufsiz); break;
+	    case 64: ret = Elf64_print_runpath(buf, bufsiz); break;
+	    default: break;
+	    }
+
+	    return ret;
 	}
     } else {
 	fprintf(stderr, "Unknown parameter %s\n", argv[1]);
